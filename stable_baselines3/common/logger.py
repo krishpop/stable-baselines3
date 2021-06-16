@@ -17,6 +17,11 @@ try:
 except ImportError:
     SummaryWriter = None
 
+try:
+    import wandb
+except ImportError:
+    wandb = None
+
 DEBUG = 10
 INFO = 20
 WARN = 30
@@ -374,6 +379,41 @@ class TensorBoardOutputFormat(KVWriter):
             self.writer = None
 
 
+class WandbOutputFormat(KVWriter):
+    def __init__(self):
+        """
+        Dumps key/value pairs using Wandb logging format.
+        """
+        assert wandb is not None, "wandb is not installed, you can use `pip install wandb` to do so"
+
+    def write(self, key_values: Dict[str, Any], key_excluded: Dict[str, Union[str, Tuple[str, ...]]], step: int = 0) -> None:
+
+        for (key, value), (_, excluded) in zip(sorted(key_values.items()), sorted(key_excluded.items())):
+
+            if excluded is not None and "wandb" in excluded:
+                continue
+
+            if isinstance(value, np.ScalarType):
+                wandb.log({key: value, "global_step": step})
+
+            if isinstance(value, th.Tensor):
+                wandb.log({key: wandb.Histogram(value), "global_step": step})
+
+            if isinstance(value, Video):
+                wandb.log({key: wandb.Video(value.frames, fps=value.fps), "global_step": step})
+
+            if isinstance(value, Figure):
+                wandb.log({key: value.figure, "global_step": step})
+
+            if isinstance(value, Image):
+                wandb.log({key: wandb.Image(value.image), "global_step": step})
+
+    def close(self) -> None:
+        """
+        Finishes the wandb run
+        """
+        wandb.run.finish()
+
 def make_output_format(_format: str, log_dir: str, log_suffix: str = "") -> KVWriter:
     """
     return a logger for the requested format
@@ -394,6 +434,8 @@ def make_output_format(_format: str, log_dir: str, log_suffix: str = "") -> KVWr
         return CSVOutputFormat(os.path.join(log_dir, f"progress{log_suffix}.csv"))
     elif _format == "tensorboard":
         return TensorBoardOutputFormat(log_dir)
+    elif _format == "wandb":
+        return WandbOutputFormat()
     else:
         raise ValueError(f"Unknown format specified: {_format}")
 
