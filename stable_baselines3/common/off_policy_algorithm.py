@@ -104,6 +104,7 @@ class OffPolicyAlgorithm(BaseAlgorithm):
         sde_support: bool = True,
         remove_time_limit_termination: bool = False,
         supported_action_spaces: Optional[Tuple[gym.spaces.Space, ...]] = None,
+        residual: bool = False
     ):
 
         super(OffPolicyAlgorithm, self).__init__(
@@ -136,6 +137,7 @@ class OffPolicyAlgorithm(BaseAlgorithm):
             replay_buffer_kwargs = {}
         self.replay_buffer_kwargs = replay_buffer_kwargs
         self._episode_storage = None
+        self.residual = residual
 
         # Remove terminations (dones) that are due to time limit
         # see https://github.com/hill-a/stable-baselines/issues/863
@@ -400,6 +402,8 @@ class OffPolicyAlgorithm(BaseAlgorithm):
         if self.num_timesteps < learning_starts and not (self.use_sde and self.use_sde_at_warmup):
             # Warmup phase
             unscaled_action = np.array([self.action_space.sample()])
+            if self.residual:
+                unscaled_action = unscaled_action * 0
         else:
             # Note: when using continuous actions,
             # we assume that the policy uses tanh to scale the action

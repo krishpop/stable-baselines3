@@ -86,6 +86,7 @@ class TD3(OffPolicyAlgorithm):
         seed: Optional[int] = None,
         device: Union[th.device, str] = "auto",
         _init_setup_model: bool = True,
+        residual: bool = False
     ):
 
         super(TD3, self).__init__(
@@ -112,6 +113,7 @@ class TD3(OffPolicyAlgorithm):
             sde_support=False,
             optimize_memory_usage=optimize_memory_usage,
             supported_action_spaces=(gym.spaces.Box),
+            residual=residual
         )
 
         self.policy_delay = policy_delay
